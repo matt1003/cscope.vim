@@ -15,6 +15,10 @@ if !exists('g:cscope_open_location')
   let g:cscope_open_location = 1
 endif
 
+if !exists('g:cscope_no_jump')
+  let g:cscope_no_jump = 0
+endif
+
 function! s:Echo(msg)
   if g:cscope_silent == 0
     echo a:msg
@@ -248,6 +252,39 @@ if exists('g:cscope_preload_path')
   call <SID>PreloadDB()
 endif
 
+function! s:LocationGet()
+  let s:cbuf = bufnr('%')
+  let s:clnr = line('.')
+endfunction
+
+function! s:LocationRestore()
+  let s:nbuf = bufnr('%')
+  let s:nlnr = line('.')
+  if s:nbuf != s:cbuf || s:nlnr != s:clnr
+    exe "normal \<c-o>"
+  endif
+endfunction
+
+function! s:BufListGet()
+  let s:bufList = []
+  let l:buf = 0
+  let l:max = bufnr('$')
+  while l:buf <= l:max
+    if bufexists(l:buf)
+      call add(s:bufList, l:buf)
+    endif
+    let l:buf += 1
+  endwhile
+endfunction
+
+function! s:BufListRestore()
+  if s:nbuf != s:cbuf
+    if index(s:bufList, s:nbuf) == -1
+      exe ":bd".s:nbuf
+    endif
+  endif
+endfunction
+
 function! ToggleLocationList()
   let l:own = winnr()
   lw
@@ -274,14 +311,30 @@ function! cscope#find(action, word)
     call <SID>updateDBs(dirtyDirs)
   endif
   call <SID>AutoloadDB(expand('%:p:h'))
-  try
-    exe ':lcs f '.a:action.' '.a:word
-    if g:cscope_open_location == 1
-      lw
+  if g:cscope_no_jump == 1
+    call <SID>LocationGet()
+    call <SID>BufListGet()
+  endif
+    if g:cscope_no_jump == 1
+      call <SID>LocationGet()
+      call <SID>BufListGet()
     endif
+  try
+    cclose
+    "exe ':cs f '.a:action.' '.a:word
+    exe ':lcs f '.a:action.' '.a:word
   catch
     echohl WarningMsg | echo 'Can not find '.a:word.' with querytype as '.a:action.'.' | echohl None
+    return
   endtry
+    if g:cscope_no_jump == 1
+      call <SID>LocationRestore()
+      call <SID>BufListRestore()
+    endif
+    if g:cscope_open_location == 1
+      lwindow 12
+      "botright copen 12
+    endif
 endfunction
 
 function! cscope#findInteractive(pat)
