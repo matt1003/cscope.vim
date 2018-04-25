@@ -15,6 +15,10 @@ if !exists('g:cscope_open_location')
   let g:cscope_open_location = 1
 endif
 
+if !exists('g:cscope_use_quickfix')
+  let g:cscope_use_quickfix = 0
+endif
+
 if !exists('g:cscope_no_jump')
   let g:cscope_no_jump = 0
 endif
@@ -320,9 +324,13 @@ function! cscope#find(action, word)
       call <SID>BufListGet()
     endif
   try
-    cclose
-    "exe ':cs f '.a:action.' '.a:word
-    exe ':lcs f '.a:action.' '.a:word
+    if g:cscope_use_quickfix == 1
+      cclose
+      exe ':cs f '.a:action.' '.a:word
+    else
+      lclose
+      exe ':lcs f '.a:action.' '.a:word
+    endif
   catch
     echohl WarningMsg | echo 'Can not find '.a:word.' with querytype as '.a:action.'.' | echohl None
     return
@@ -332,8 +340,11 @@ function! cscope#find(action, word)
       call <SID>BufListRestore()
     endif
     if g:cscope_open_location == 1
-      lwindow 12
-      "botright copen 12
+      if g:cscope_use_quickfix == 1
+        botright copen 12
+      else
+        botright lwindow 12
+    endif
     endif
 endfunction
 
